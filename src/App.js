@@ -8,8 +8,13 @@ import theme from "./project.theme";
 
 // routes
 import routes from "./routes";
+
 // routes management
 import { PublicRoute, PrivateRoute } from "./routeManagments";
+
+// components
+import Notification from "./components/notification/Notification";
+
 function App() {
   return (
     <ThemeProvider theme={theme}>
@@ -24,6 +29,7 @@ function App() {
               );
             })}
           </Switch>
+          <Notification />
         </div>
       </div>
     </ThemeProvider>
