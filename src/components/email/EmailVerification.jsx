@@ -17,7 +17,7 @@ import { useTheme } from "@material-ui/core";
 import { profile } from "../../config/webURLs";
 
 // styles
-import useStyles from "./phone.style";
+import useStyles from "./emailVerification.style";
 
 // config
 import baseURL from "../../config/baseURL";
@@ -35,7 +35,7 @@ import {
 } from "../../utils/storeData";
 
 //  signin component -----------------------------------------------
-const OTP = ({
+const Verification = ({
   setUserToken,
   setNotification,
   setShow,
@@ -45,7 +45,7 @@ const OTP = ({
   history,
 }) => {
   // state
-  const [otpError, setOtpError] = useState("");
+  const [verificationError, setVerificationError] = useState("");
 
   // component style
   const classes = useStyles();
@@ -56,13 +56,13 @@ const OTP = ({
   // form field
   const formik = useFormik({
     initialValues: {
-      otp: "",
+      verification: "",
     },
 
     validationSchema: Yup.object({
-      otp: Yup.string()
+      verification: Yup.string()
         .trim()
-        .matches(/^[0-9]{4}$/, "Invalid OTP format!!")
+        .matches(/^[0-9]{6}$/, "Invalid code format!!")
         .required("Required!"),
     }),
   });
@@ -78,50 +78,58 @@ const OTP = ({
     e.preventDefault();
     try {
       let data = {
-        phoneNumber: getUserData().phone,
-        verificationCode: formik.values.otp,
+        email: getUserData().email,
         token: getToken(),
+        verificationToken: formik.values.verification,
       };
       let response = await axios({
         method: "POST",
-        url: `${baseURL}/users/phone/verify`,
+        url: `${baseURL}/users/email/verify`,
         data,
       });
 
-      // console.log("response ==> ", response);
+      console.log("email verification response ==> ", response);
 
       // if all good
       if (response.data.success) {
+        // setNotification({
+        //   open: true,
+        //   severity: "success",
+        //   msg: response.data.message,
+        // });
+
+        let signup_response = await axios({
+          method: "POST",
+          url: `${baseURL}/users`,
+          data: getUserData(),
+        });
+        console.log("signup response ==>> ", signup_response);
+
+        setId(signup_response.data.results.user._id);
+
         setNotification({
           open: true,
           severity: "success",
-          msg: response.data.message,
+          msg: signup_response.data.message,
         });
+        setUserToken(signup_response.data.results.user.token);
+        setData(signup_response.data.results.user);
 
-        if (response.data.results.isLogin) {
-          setId(response.data.results.user._id);
-          setUserToken(response.data.results.user.token);
-          setData(response.data.results.user);
-          history.push(profile);
-        } else {
-          setShow((prev) => {
-            return { ...prev, otp: false, signUp: true };
-          });
-        }
+        history.push(profile);
       } else {
-        if (response.data.messageObj.wrongOtpCount < 3) {
-          setOtpError(
-            `Wrong OTP, ${
-              3 - response.data.messageObj.wrongOtpCount
+        if (response.data.messageObj.wrongEmailTokenCount < 3) {
+          setVerificationError(
+            `Wrong Code, ${
+              3 - response.data.messageObj.wrongEmailTokenCount
             } attempts remaining `
           );
         } else {
-          setOtpError("");
+          setVerificationError("");
 
           clearData();
 
           setShow((prev) => {
-            return { ...prev, phone: true, otp: false };
+            return { ...prev, phone: true, verification: false };
           });
         }
         setNotification({
@@ -149,12 +157,12 @@ const OTP = ({
           <TextsmsOutlinedIcon />
         </Avatar>
         <Typography component="h1" variant="h5">
-          Enter OTP
+          Enter Verification Code
         </Typography>
 
-        {!!otpError && (
+        {!!verificationError && (
           <Typography color="error" variant="body2">
-            {otpError}
+            {verificationError}
           </Typography>
         )}
 
@@ -167,16 +175,16 @@ const OTP = ({
             InputLabelProps={{
               style: { color: "inherit" },
             }}
-            id="otp"
-            label="OTP"
-            name="otp"
-            autoComplete="otp"
+            id="verification"
+            label="Verification Code"
+            name="verification"
+            autoComplete="verification"
             InputProps={{
               style: { color: theme.palette.common.white },
             }}
             onChange={onChangeHandle}
-            error={formik.errors.otp && formik.touched.otp}
-            helperText={formik.errors.otp}
+            error={formik.errors.verification && formik.touched.verification}
+            helperText={formik.errors.verification}
             FormHelperTextProps={{
               style: { color: theme.palette.error.main },
             }}
@@ -192,10 +200,10 @@ const OTP = ({
               root: classes.submit,
               disabled: classes.disabled,
             }}
-            disabled={!!formik.errors.otp}
+            disabled={!!formik.errors.verification}
           >
             <Typography color="inherit" style={{ marginTop: "2px" }}>
-              Verify OTP
+              Verify Code
             </Typography>
           </Button>
         </form>
@@ -218,4 +226,4 @@ const mapActionToProps = (dispatch) => {
     clearData: () => dispatch(clearUserData()),
   };
 };
-export default connect(null, mapActionToProps)(withRouter(OTP));
+export default connect(null, mapActionToProps)(withRouter(Verification));
